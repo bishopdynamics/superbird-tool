@@ -1,0 +1,78 @@
+#!/bin/sh
+
+# init script for usb gadget with adb and rndis
+#   put this on the device at: /etc/init.d/S49usbgadget
+
+
+# Research
+#   starting point: https://github.com/frederic/superbird-bulkcmd/blob/main/scripts/enable-adb.sh.client
+#   info about configfs https://elinux.org/images/e/ef/USB_Gadget_Configfs_API_0.pdf
+#   info about usbnet and bridging https://developer.ridgerun.com/wiki/index.php/How_to_use_USB_device_networking
+#   more info, including for windows https://learn.adafruit.com/turning-your-raspberry-pi-zero-into-a-usb-gadget/ethernet-gadget
+#   a gist that was helpful: https://gist.github.com/geekman/5bdb5abdc9ec6ac91d5646de0c0c60c4
+
+
+# first we create some device nodes
+mkdir -p /dev/usb-ffs
+mkdir -p /dev/usb-ffs/adb
+
+# mount configfs, which is an interface that allows definition of arbitrary functions and configurations to
+#   define an application specific USB composite device from userspace.
+mount -t configfs none /sys/kernel/config/
+
+# lets instantiate a new gadget device template
+mkdir -p /sys/kernel/config/usb_gadget/g1
+
+# write some identifying information 
+echo 0x18d1 > /sys/kernel/config/usb_gadget/g1/idVendor
+echo 0x4e40 > /sys/kernel/config/usb_gadget/g1/idProduct
+echo 0x0223 > /sys/kernel/config/usb_gadget/g1/bcdDevice
+echo 0x0200 > /sys/kernel/config/usb_gadget/g1/bcdUSB
+
+# instantiate english language strings
+mkdir -p /sys/kernel/config/usb_gadget/g1/strings/0x409
+
+# write some more identifying information for this device
+echo 123456 > /sys/kernel/config/usb_gadget/g1/strings/0x409/serialnumber
+echo Spotify > /sys/kernel/config/usb_gadget/g1/strings/0x409/manufacturer
+echo Superbird > /sys/kernel/config/usb_gadget/g1/strings/0x409/product
+
+# create function instances. here we create function for Android Debug Bridge, and another for usb network
+mkdir -p /sys/kernel/config/usb_gadget/g1/functions/ffs.adb  # adb
+mkdir -p /sys/kernel/config/usb_gadget/g1/functions/rndis.usb0  # usbnet
+
+# create a configuration instance
+mkdir -p /sys/kernel/config/usb_gadget/g1/configs/b.1
+# create english language strings 
+mkdir -p /sys/kernel/config/usb_gadget/g1/configs/b.1/strings/0x409
+# write a description for this device configuration
+echo adb > /sys/kernel/config/usb_gadget/g1/configs/b.1/strings/0x409/configuration
+
+# configure an attribute, maxpower in this case
+echo 500 > /sys/kernel/config/usb_gadget/g1/configs/b.1/MaxPower
+
+# link our config with the os_desc config
+ln -s /sys/kernel/config/usb_gadget/g1/configs/b.1 /sys/kernel/config/usb_gadget/g1/os_desc/b.1
+
+# bind our function instance to its configuration
+ln -s /sys/kernel/config/usb_gadget/g1/functions/ffs.adb /sys/kernel/config/usb_gadget/g1/configs/b.1
+ln -s /sys/kernel/config/usb_gadget/g1/functions/rndis.usb0 /sys/kernel/config/usb_gadget/g1/configs/b.1
+
+# mount the adb function filesystem
+mount -t functionfs adb /dev/usb-ffs/adb
+
+# kick off the adb daemon in the background, and give it time to initialize
+/usr/bin/adbd &
+sleep 5s
+
+# attach the created gadget deviec to our UDC driver
+# echo ff400000.dwc2_a > /sys/kernel/config/usb_gadget/g1/UDC
+UDC_DEVICE=$(ls -1 /sys/class/udc/)
+echo "$UDC_DEVICE" > /sys/kernel/config/usb_gadget/g1/UDC
+
+# bring up the usb0 interface
+ifconfig usb0 up
+ifconfig usb0 192.168.7.2 netmask 255.255.255.0 network 192.168.7.0 broadcast 192.168.7.255 gateway 192.168.7.1
+
+# set routing to use the usb0 interface
+route add default gw 192.168.7.1

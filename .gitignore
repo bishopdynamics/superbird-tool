@@ -1,0 +1,8 @@
+__pycache__/
+dumps/
+tmp/
+superbird_tool
+superbird_tool.build/
+superbird_tool.bin
+superbird_tool.exe
+superbird_tool.cmd

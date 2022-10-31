@@ -1,7 +1,7 @@
 # Cross-Platform Spotify Car Thing (superbird) hacking toolkit
 
 This toolkit re-implements most of the functionality from [frederic's scripts](https://github.com/frederic/superbird-bulkcmd).
-The key difference here, is that this tool uses `pyamlboot` instead of the proprietary `update` binary from Amlogic, 
+The key difference here, is that this tool uses [`pyamlboot`](https://github.com/superna9999/pyamlboot) instead of the proprietary `update` binary from Amlogic, 
 which allows it to work on many more platforms!
 
 Everything in [`images/`](images/) came directly from [frederic's repo](https://github.com/frederic/superbird-bulkcmd).

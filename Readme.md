@@ -27,7 +27,7 @@ However, dumping partitions is MUCH slower.
 The original tool from Amlogic manages to read directly from the mmc, without having to first read it into memory, so it is a lot faster.
 Unfortunately, we cannot currently replicate this method using `pyamlboot`.
 
-Instead, to dump partitions we first have to tell the device to read a chunk (256 bytes) into memory, and then we can read it from memory out to a file, one chunk at a time. 
+Instead, to dump partitions we first have to tell the device to read a chunk (128KB) into memory, and then we can read it from memory out to a file, one chunk at a time. 
 
 The copy rate is about `500KB/s`, and in my testing (Ubuntu x86_64) it takes just under 2 hours to dump all partitions!
 

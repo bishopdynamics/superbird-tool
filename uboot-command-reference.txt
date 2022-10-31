@@ -1,0 +1,162 @@
+u-boot command reference for superbird
+
+These are the base-level uboot commands:
+
+aml_sysrecovery- Burning with amlogic format package from partition sysrecovery
+amlmmc  - AMLMMC sub system
+amlnf   - aml mtd nand sub-system
+autoscr - run script from memory
+avb     - avb
+base    - print or set address offset
+bcb     - bcb
+bmp     - manipulate BMP image data
+boot_cooling- cpu temp-system
+booti   - boot arm64 Linux Image image from memory
+bootm   - boot application image from memory
+chpart  - change active partition
+clkmsr  - Amlogic measure clock
+cmp     - memory compare
+consume_boot_try- consume_boot_try
+cp      - memory copy
+crc32   - checksum calculation
+dcache  - enable or disable data cache
+defenv_reserv- reserve some specified envs after defaulting env
+dtimg   - manipulate dtb/dtbo Android image
+echo    - echo args to console
+efuse   - efuse commands
+efuse_user- efuse user space read write ops
+emmc    - EMMC sub system
+env     - environment handling commands
+exit    - exit script
+false   - do nothing, unsuccessfully
+fastboot- use USB Fastboot protocol
+fatinfo - print information about filesystem
+fatload - load binary file from a dos filesystem
+fatls   - list files in a directory (default /)
+fatsize - determine a file's size
+fdt     - flattened device tree utility commands
+forceupdate- forceupdate
+get_avb_mode- get_avb_mode
+get_rebootmode- get reboot mode
+get_system_as_root_mode- get_system_as_root_mode
+get_valid_slot- get_valid_slot
+go      - start application at address 'addr'
+gpio    - query and control gpio pins
+gpt     - GUID Partition Table
+guid    - GUID - generate Globally Unique Identifier based on random UUID
+help    - print command description/usage
+i2c     - I2C sub-system
+icache  - enable or disable instruction cache
+img_osd - image osd sub-system
+imgread - Read the image from internal flash with actual size
+itest   - return true/false on integer compare
+jtagoff - disable jtag
+jtagon  - enable jtag
+keyman  - Unify key ops interfaces based dts cfg
+keyunify- key unify sub-system
+lcd     - lcd sub-system
+ld_bl40 - load bl40 and run bl40.bin from bl33
+loadb   - load binary file over serial line (kermit mode)
+loadx   - load binary file over serial line (xmodem mode)
+loady   - load binary file over serial line (ymodem mode)
+loop    - infinite loop on address range
+md      - memory display
+mm      - memory modify (auto-incrementing address)
+mmc     - MMC sub system
+mmcinfo - display MMC info
+mtdparts- define flash/nand partitions
+mw      - memory write (fill)
+mwm     - mw mask function
+nand    - NAND sub-system
+nboot   - boot from NAND device
+nm      - memory modify (constant address)
+open_scp_log- print SCP messgage
+osd     - osd sub-system
+printenv- print environment variables
+query   - SoC query commands
+read_temp- cpu temp-system
+reboot  - set reboot mode and reboot system
+reset   - Perform RESET of the CPU
+ringmsr - Amlogic measure ring
+rpmb_state- RPMB sub-system
+rsvmem  - reserve memory
+run     - run commands in an environment variable
+saradc  - saradc sub-system
+saradc_12bit- saradc sub-system
+saveenv - save environment variables to persistent storage
+sdc_burn- Burning with amlogic format package in sdmmc 
+sdc_update- Burning a partition with image file in sdmmc card
+set_active_slot- set_active_slot
+set_trim_base- cpu temp-system
+set_usb_boot- set usb boot mode
+setenv  - set environment variables
+sf      - SPI flash sub-system
+showvar - print local hushshell variables
+silent  - silent
+sleep   - delay execution for some time
+sspi    - SPI utility command
+store   - STORE sub-system
+systemoff- system off 
+tee_log_level- update tee log level
+temp_triming- cpu temp-system
+test    - minimal test like /bin/sh
+testcache- cache test
+testsmp - test each CPU power on/off
+true    - do nothing, successfully
+ubi     - ubi commands
+ubifsload- load file from an UBIFS filesystem
+ubifsls - list files in a directory
+ubifsmount- mount UBIFS volume
+ubifsumount- unmount UBIFS volume
+ui      - ui sub-system
+unpackimg- un pack logo image into pictures
+update  - Enter v2 usbburning mode
+usb     - USB sub-system
+usb_burn- Burning with amlogic format package in usb 
+usb_update- Burning a partition with image file in usb host
+usbboot - boot from USB device
+uuid    - UUID - generate random Universally Unique Identifier
+version - print monitor, compiler and linker version
+viu_probe- enable viu probe in no secure chip
+vout    - VOUT sub-system
+vpp     - vpp sub-system
+vpu     - vpu sub-system
+write_trim- cpu temp-system
+write_version- cpu temp-system
+
+here is how to use amlmmc:
+
+amlmmc read  <partition_name> ram_addr addr_byte# cnt_byte
+amlmmc write <partition_name> ram_addr addr_byte# cnt_byte
+amlmmc erase <partition_name> addr_byte# cnt_byte
+amlmmc erase <partition_name>/<device num>
+amlmmc rescan <device_num>
+amlmmc part <device_num> - show partition infomation of mmc
+amlmmc list - lists available devices
+amlmmc env -  display env partition offset
+amlmmc switch <device_num> <part name> - part name : boot0, boot1, user
+amlmmc status <device_num> - read sd/emmc device status
+amlmmc ext_csd <device_num> <byte> - read sd/emmc device EXT_CSD [byte]
+amlmmc ext_csd <device_num> <byte> <value> - write sd/emmc device EXT_CSD [byte] value
+amlmmc response <device_num> - read sd/emmc last command response
+amlmmc controller <device_num> - read sd/emmc controller register
+amlmmc write_protect <partition_name> <write_protect_type> - set write protect on partition through power_on or temporary
+amlmmc write_protect <addr_base16> <cnt_base10> <write_protect_type> - set write protect on specified address through power_on or temporary
+amlmmc send_wp_status <partition_name> send protect status of partition
+amlmmc send_wp_status <addr_base16> <cnt_base10> send protect status on specified address
+amlmmc send_wp_type <partition_name> send protect type of partition
+amlmmc send_wp_type <addr_base16> <cnt_base10> send protect type on specified address
+amlmmc clear_wp <partition_name> clear write protect of partition
+amlmmc clear_wp <addr_base16> <cnt_base10> clear write protect on specified addresst
+amlmmc ds <dev_num> <val> set driver strength
+amlmmc key - disprotect key partition
+amlmmc clktest <dev> - display info of delaycell and count
+amlmmc reset_dly <dev> - reset all delay register
+amlmmc set_rxdly <dev> <0xdelay1> <0xdelay2> - manually set rx delay value
+amlmmc set_txdly <dev> <0xdelay> - manually set tx delay
+amlmmc refix <dev> - fix adj
+amlmmc move_all <dev> <count> - move all data delay line <count> steps
+amlmmc move_single <dev> <line> <count> - move <line> <count> steps
+amlmmc set_vddee <dev> <value> - set vddee
+amlmmc show_vddee <dev> -show current vddee
+amlmmc line_eyetest <dev> <line> single line eyetest

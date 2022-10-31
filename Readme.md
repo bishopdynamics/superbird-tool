@@ -161,7 +161,7 @@ I'm still working on getting the [host configured](setup_host_usbnet.sh) to corr
 
 ## Example Usage
 
-As an example, here are steps to enable persistent adb and usbnet, disable a/b booting, and disable charger check, on a fresh device.
+As an example (on Linux), here are steps to enable persistent adb and usbnet, disable a/b booting, and disable charger check, on a fresh device.
 
 ```
 # starting from a fresh device

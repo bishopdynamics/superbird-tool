@@ -105,7 +105,8 @@ options:
 There are four possible boot modes
 
 ### USB Mode
-this is what you get if you hold buttons 1 & 4 while plugging in the device
+This is what you get if you hold buttons 1 & 4 while plugging in the device.
+
 The UART console will print: 
 ```
 G12A:BL:0253b8:61aa2d;FEAT:F0F821B0:12020;POC:D;RCY:0;USB:0;
@@ -114,7 +115,8 @@ G12A:BL:0253b8:61aa2d;FEAT:F0F821B0:12020;POC:D;RCY:0;USB:0;
 In this mode, the device shows up on USB as: `1b8e:c003 Amlogic, Inc. GX-CHIP`
 
 ### USB Burn Mode
-this is a special uboot image, which we can interact with via usb
+This is a special uboot image, which we can interact with via usb.
+
 The UART console output will typicaly end with:
 ```
 U-Boot 2015.01 (Jan 21 2022 - 08:55:34 - v1.0-57-gec3ec936c2)

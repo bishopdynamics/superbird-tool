@@ -188,7 +188,7 @@ class SuperbirdDevice:
         """ read env.txt, then send it to device """
         env_data = ''
         with open(env_file, 'r', encoding='utf-8') as envf:
-            envf.read()
+            env_data = envf.read()
         self.send_env(env_data)
 
     def send_file(self, filepath:str, address:int):

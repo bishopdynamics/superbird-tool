@@ -24,12 +24,12 @@ Make backups.
 This tool tries to replace the proprietary `update` binary from Amlogic, and it covers enough functionality to be useful for superbird.
 However, dumping partitions is MUCH slower.
 
-The original tool from Amlogic manages to read directly from the mmc, without having to first read it into memory, so it is a lot faster.
+The original tool from Amlogic manages to read directly from the mmc, without having to first read it into memory, 
+so it is a lot faster at about `12MB/s` or about 7 minutes to dump all partitions.
 Unfortunately, we cannot currently replicate this method using `pyamlboot`.
 
-Instead, to dump partitions we first have to tell the device to read a chunk (128KB) into memory, and then we can read it from memory out to a file, one chunk at a time. 
-
-The copy rate is about `500KB/s`, and in my testing (Ubuntu x86_64) it takes just under 2 hours to dump all partitions!
+Instead, to dump partitions we first have to tell the device to read a chunk (128KB) into memory, and then we can read it from memory out to a file, one chunk at a time.
+The copy rate is about `500KB/s`, and in my testing on Ubuntu x86_64 it takes just under 2 hours to dump all partitions!
 
 Also, one very important detail: I have not (yet) implemented functionality to restore partitions from a dump.
 
@@ -158,6 +158,47 @@ where I added a lot of comments, and added `rndis` function, to allow usb networ
 Please read it carefully before using.
 
 I'm still working on getting the [host configured](setup_host_usbnet.sh) to correctly forward network, if you get this working well, please let me know!
+
+## Example Usage
+
+As an example, here are steps to enable persistent adb and usbnet, disable a/b booting, and disable charger check, on a fresh device.
+
+```
+# starting from a fresh device
+
+# plug in with buttons 1 & 4 held
+sudo ./superbird_tool.py --find_device  # check that it is in usb mode
+sudo ./superbird_tool.py --burn_mode
+sudo ./superbird_tool.py --enable_burn_mode
+sudo ./superbird_tool.py --disable_avb2  # disable A/B, lock to A
+sudo ./superbird_tool.py --disable_charger_check
+
+# unplug and replug without holding any buttons
+
+sudo ./superbird_tool.py --find_device   # check that it is in usb burn mode
+sudo ./superbird_tool.py --boot_adb_kernel
+
+# device boots to spotify logo, but app does not launch
+
+adb devices  # check that your device shows up in adb
+
+# setup persistent USB Gadget (adb and usbnet)
+adb shell mount -o remount,rw /
+adb shell umount /etc/init.d/S49usbgadget
+adb push S49usbgadget /etc/init.d/
+adb shell chmod +x /etc/init.d/S49usbgadget
+adb shell mount -o remount,ro /  # OK if this step fails
+adb shell reboot
+
+# device can take a while to reboot, just watch what the screen does and run --find_device until it shows up
+sudo ./superbird_tool.py --find_device   # check that it is in usb burn mode
+sudo ./superbird_tool.py --disable_burn_mode
+
+# unplug and replug without holding any buttons
+#   it should boot normally (app should launch), now with adb and usbnet enabled
+
+ip addr  # you should see usb0 listed
+```
 
 ## Known Issues
 * The option `--enable_uart_shell` is really only meant to be run on a fresh device. It will rewrite `initargs` env var, removing any other changes you made like using a particular system partition every boot.

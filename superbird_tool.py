@@ -85,14 +85,14 @@ if __name__ == "__main__":
             dev.bulkcmd('amlmmc env')
             dev.bulkcmd(r'setenv storeargs ${storeargs} setenv avb2 0\;')
             dev.bulkcmd('setenv initargs init=/sbin/pre-init')
-            dev.bulkcmd(r'setenv initargs ${initargs} ramoops.pstore_en=1')
-            dev.bulkcmd(r'setenv initargs ${initargs} ramoops.record_size=0x8000')
-            dev.bulkcmd(r'setenv initargs ${initargs} ramoops.console_size=0x4000')
-            dev.bulkcmd(r'setenv initargs ${initargs} rootfstype=ext4')
-            dev.bulkcmd(r'setenv initargs ${initargs} console=ttyS0,115200n8')
-            dev.bulkcmd(r'setenv initargs ${initargs} no_console_suspend')
-            dev.bulkcmd(r'setenv initargs ${initargs} earlycon=aml-uart,0xff803000')
-            dev.bulkcmd(r'setenv initargs ${initargs} ro root=/dev/mmcblk0p14')
+            dev.bulkcmd(r'setenv initargs "${initargs} ramoops.pstore_en=1"')
+            dev.bulkcmd(r'setenv initargs "${initargs} ramoops.record_size=0x8000"')
+            dev.bulkcmd(r'setenv initargs "${initargs} ramoops.console_size=0x4000"')
+            dev.bulkcmd(r'setenv initargs "${initargs} rootfstype=ext4"')
+            dev.bulkcmd(r'setenv initargs "${initargs} console=ttyS0,115200n8"')
+            dev.bulkcmd(r'setenv initargs "${initargs} no_console_suspend"')
+            dev.bulkcmd(r'setenv initargs "${initargs} earlycon=aml-uart,0xff803000"')
+            dev.bulkcmd(r'setenv initargs "${initargs} ro root=/dev/mmcblk0p14"')
             dev.bulkcmd('setenv active_slot _a')
             dev.bulkcmd('setenv boot_part boot_a')
             dev.bulkcmd('env save')
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         if check_device_mode('usb-burn'):
             print('Enabling USB Burn Mode at every boot (if USB host connected)')
             dev.bulkcmd('amlmmc env')
-            dev.bulkcmd(r'setenv storeargs ${storeargs} run update\;')
+            dev.bulkcmd(r'setenv storeargs "${storeargs} run update\;"')
             dev.bulkcmd('env save')
             print('Every time the device boots, if usb is connected it will boot into USB Burn Mode')
     elif args.disable_burn_mode:
@@ -160,13 +160,13 @@ if __name__ == "__main__":
             #   if it detects OK charger, it then calls: run storeboot
             #   so we can skip the check by changing bootcmd to just call: run storeboot
             dev.bulkcmd('amlmmc env')
-            dev.bulkcmd('setenv bootcmd run storeboot')
+            dev.bulkcmd('setenv bootcmd "run storeboot"')
             dev.bulkcmd('env save')
             print('The device will not check for valid charger')
     elif args.enable_charger_check:
         if check_device_mode('usb-burn'):
             dev.bulkcmd('amlmmc env')
-            dev.bulkcmd('setenv bootcmd run check_charger')
+            dev.bulkcmd('setenv bootcmd "run check_charger"')
             dev.bulkcmd('env save')
             print('The device will now check for valid charger, requiring you to press menu button to bypass')
     elif args.burn_mode:

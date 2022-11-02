@@ -10,11 +10,24 @@ import argparse
 import os
 import shutil
 import platform
+import tempfile
+
+from uboot_env import read_environ
 
 from superbird_device import SuperbirdDevice
 from superbird_device import find_device, check_device_mode
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
+
+def convert_env_dump(env_dump:str, env_file:str):
+    """ convert a dumped env partition image into a human-readable text file """
+    print(f'Converting partition dump: {env_dump} to textfile: {env_file}')
+    (environ, _length, _crc) = read_environ(env_dump)
+    with open(env_file, 'w', encoding='utf-8') as oef:
+        lines = []
+        for key, value in environ.items():
+            lines.append(f'{key}={value}\n')
+        oef.writelines(lines)
 
 if __name__ == "__main__":
     print(f'Spotify Car Thing (superbird) toolkit, v{VERSION}, by bishopdynamics')
@@ -36,7 +49,11 @@ if __name__ == "__main__":
     argument_parser.add_argument('--enable_charger_check', action='store_true', help='enable check for valid charger at boot')
     argument_parser.add_argument('--dump_device', action='store', type=str, nargs=1, metavar=('OUTPUT_FOLDER'), help='Dump all partitions to a folder')
     argument_parser.add_argument('--dump_partition', action='store', type=str, nargs=2, metavar=('PARTITION_NAME', 'OUTPUT_FILE'), help='Dump a partition to a file')
-
+    argument_parser.add_argument('--restore_stock_env', action='store_true', help='wipe env, then restore default env values from stock_env.txt')
+    argument_parser.add_argument('--send_env', action='store', type=str, nargs=1, metavar=('ENV_TXT'), help='import contents of given env.txt file (without wiping)')
+    argument_parser.add_argument('--send_full_env', action='store', type=str, nargs=1, metavar=('ENV_TXT'), help='wipe env, then import contents of given env.txt file')
+    argument_parser.add_argument('--convert_env_dump', action='store', type=str, nargs=2, metavar=('ENV_DUMP', 'OUTPUT_TXT'), help='convert a local dump of env partition into text format')
+    argument_parser.add_argument('--get_env', action='store', type=str, nargs=1, metavar=('ENV_TXT'), help='dump device env partition, and convert it to env.txt format')
 
 
     args = argument_parser.parse_args()
@@ -50,9 +67,18 @@ if __name__ == "__main__":
             print('Need to run as root!')
             sys.exit(1)
 
+    # First check options that do not need the device
+
     if args.find_device:
         find_device()
         sys.exit()
+    elif args.convert_env_dump:
+        ENV_DUMP = args.convert_env_dump[0]
+        ENV_FILE = args.convert_env_dump[1]
+        convert_env_dump(ENV_DUMP, ENV_FILE)
+        sys.exit()
+
+    # Now get the device, and check options that need it
 
     dev = SuperbirdDevice()
 
@@ -183,4 +209,38 @@ if __name__ == "__main__":
         if check_device_mode('usb-burn'):
             print('Continuing boot...')
             dev.bulkcmd('mw.b 0x17f89754 1')
+    elif args.restore_stock_env:
+        ENV_FILE = 'stock_env.txt'
+        if check_device_mode('usb-burn'):
+            print('Restoring env by first wiping env, then importing stock_env.txt')
+            dev.bulkcmd('amlmmc env')
+            dev.bulkcmd('amlmmc erase env')
+            dev.send_env_file(ENV_FILE)
+            dev.bulkcmd('env save')
+    elif args.send_env:
+        ENV_FILE = args.send_env[0]
+        if check_device_mode('usb-burn'):
+            # Do not wipe env partition first, just import values from given file
+            print(f'Importing the contents of {ENV_FILE}')
+            dev.bulkcmd('amlmmc env')
+            dev.send_env_file(ENV_FILE)
+            dev.bulkcmd('env save')
+    elif args.send_full_env:
+        ENV_FILE = args.send_full_env[0]
+        if check_device_mode('usb-burn'):
+            # wipe the env partition, then import from given file
+            print('Wiping env partition')
+            dev.bulkcmd('amlmmc env')
+            dev.bulkcmd('amlmmc erase env')
+            print(f'Importing the contents of {ENV_FILE}')
+            dev.send_env_file(ENV_FILE)
+            dev.bulkcmd('env save')
+    elif args.get_env:
+        ENV_FILE = args.get_env[0]
+        if check_device_mode('usb-burn'):
+            with tempfile.NamedTemporaryFile() as TEMP_FILE:
+                print(f'Getting current env and writing to text file: {ENV_FILE}')
+                dev.dump_partition('env', TEMP_FILE.name)
+                convert_env_dump(TEMP_FILE.name, ENV_FILE)
+
     sys.exit()

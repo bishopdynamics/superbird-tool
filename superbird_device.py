@@ -170,10 +170,10 @@ class SuperbirdDevice:
                 self.print('    If the device is connected through a USB hub, try connecting it directly to a port on your machine')
                 sys.exit(1)
 
-    def write(self, address:int, data, chunk_size=8):
+    def write(self, address:int, data, chunk_size=8, append_zeros=True):
         """ write data to an address """
         self.print(f' writing to: {hex(address)}')
-        self.device.writeLargeMemory(address, data, chunk_size, True)
+        self.device.writeLargeMemory(address, data, chunk_size, append_zeros)
 
     def send_env(self, env_string:str):
         """ send given env string to device, space-separated kernel args on one line """
@@ -191,17 +191,17 @@ class SuperbirdDevice:
             env_data = envf.read()
         self.send_env(env_data)
 
-    def send_file(self, filepath:str, address:int):
+    def send_file(self, filepath:str, address:int, chunk_size:int=512, append_zeros=True):
         """ write given file to device memory at given address """
         self.print(f'writing {filepath} at {hex(address)}')
         file_data = None
         with open(filepath, 'rb') as flp:
             file_data = flp.read()
-        self.write(address, file_data, chunk_size=512)
+        self.write(address, file_data, chunk_size, append_zeros)
 
     def bl2_boot(self, bl2_file:str, bootloader_file:str):
         """ send a bl2 and then chain a uboot image with it """
-        self.send_file(bl2_file, self.ADDR_BL2)
+        self.send_file(bl2_file, self.ADDR_BL2, chunk_size=4096, append_zeros=False)
         self.device.run(self.ADDR_BL2)
         data = None
         with open(bootloader_file, 'rb') as blf:

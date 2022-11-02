@@ -6,10 +6,12 @@ which allows it to work on many more platforms!
 
 Everything in [`images/`](images/) came directly from [frederic's repo](https://github.com/frederic/superbird-bulkcmd).
 
-The purpose of this tool is to provide useful, working examples for how to use `pyamlboot` to perform development-related tasks on the Spotify Car thing.
+The purpose of this tool is to provide useful, working examples for how to use `pyamlboot` to perform development-related tasks on the Spotify Car Thing.
 
 Contributions are welcome. This code is unlicensed: you can do whatever you want with it.
  `pyamlboot` is Apache-2.0, `libusb` is LGPL-2.1
+
+A [Changelog can be found here](Changelog.md)
 
 ## Warranty and Liability
 
@@ -99,6 +101,13 @@ options:
                         Dump all partitions to a folder
   --dump_partition PARTITION_NAME OUTPUT_FILE
                         Dump a partition to a file
+  --restore_stock_env   wipe env, then restore default env values from stock_env.txt
+  --send_env ENV_TXT    import contents of given env.txt file (without wiping)
+  --send_full_env ENV_TXT
+                        wipe env, then import contents of given env.txt file
+  --convert_env_dump ENV_DUMP OUTPUT_TXT
+                        convert a local dump of env partition into text format
+  --get_env ENV_TXT     dump device env partition, and convert it to env.txt format
 ```
 
 ## Boot Modes

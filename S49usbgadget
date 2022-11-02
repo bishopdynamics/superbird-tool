@@ -72,7 +72,7 @@ echo "$UDC_DEVICE" > /sys/kernel/config/usb_gadget/g1/UDC
 
 # bring up the usb0 interface
 ifconfig usb0 up
-ifconfig usb0 192.168.7.2 netmask 255.255.255.0 network 192.168.7.0 broadcast 192.168.7.255 gateway 192.168.7.1
+ifconfig usb0 192.168.7.2 netmask 255.255.255.0 broadcast 192.168.7.255
 
 # set routing to use the usb0 interface
-route add default gw 192.168.7.1
+route add default via 192.168.7.1 dev usb0

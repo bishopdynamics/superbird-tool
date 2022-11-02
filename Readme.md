@@ -166,7 +166,8 @@ where I added a lot of comments, and added `rndis` function, to allow usb networ
 
 Please read it carefully before using.
 
-I'm still working on getting the [host configured](setup_host_usbnet.sh) to correctly forward network, if you get this working well, please let me know!
+You can try this [host setup script](setup_host_usbnet.sh) to configure a Linux machine as host. 
+I am using a RockPi-E with Armbian Community Kinetic 22.10 with success
 
 ## Example Usage
 

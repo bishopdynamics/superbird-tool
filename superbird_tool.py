@@ -17,7 +17,7 @@ from uboot_env import read_environ
 from superbird_device import SuperbirdDevice
 from superbird_device import find_device, check_device_mode
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 
 def convert_env_dump(env_dump:str, env_file:str):
     """ convert a dumped env partition image into a human-readable text file """
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     argument_parser.add_argument('--enable_uart_shell', action='store_true', help='enable UART shell')
     argument_parser.add_argument('--disable_avb2', action='store_true', help='disable A/B booting, lock to A')
     argument_parser.add_argument('--enable_burn_mode', action='store_true', help='enable USB Burn Mode at every boot (when connected to USB host)')
+    argument_parser.add_argument('--enable_burn_mode_button', action='store_true', help='enable USB Burn Mode if preset button 4 is held while booting (when connected to USB host)')
     argument_parser.add_argument('--disable_burn_mode', action='store_true', help='Disable USB Burn Mode at every boot (when connected to USB host)')
     argument_parser.add_argument('--disable_charger_check', action='store_true', help='disable check for valid charger at boot')
     argument_parser.add_argument('--enable_charger_check', action='store_true', help='enable check for valid charger at boot')
@@ -129,6 +130,13 @@ if __name__ == "__main__":
             dev.bulkcmd(r'setenv storeargs "${storeargs} run update\;"')
             dev.bulkcmd('env save')
             print('Every time the device boots, if usb is connected it will boot into USB Burn Mode')
+    elif args.enable_burn_mode_button:
+        if check_device_mode('usb-burn'):
+            print('Enabling USB Burn Mode at boot if preset button 4 is held')
+            dev.bulkcmd('amlmmc env')
+            dev.bulkcmd(r'setenv storeargs "${storeargs} if gpio input GPIOA_3; then run update; fi;"')
+            dev.bulkcmd('env save')
+            print('Every time the device boots, if usb is connected AND preset button 4 is held, it will boot into USB Burn Mode')
     elif args.disable_burn_mode:
         if check_device_mode('usb-burn'):
             print('Disabling USB Burn Mode at every boot (if USB host connected)')

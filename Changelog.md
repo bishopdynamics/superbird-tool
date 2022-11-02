@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.3
+* added `--enable_burn_mode_button` thanks to lmore337!
+
 ## 0.0.2 November 1, 2022
 
 * added `--restore_stock_env` - wipe uboot env partition, then restore it to stock values by importing `stock_env.txt`

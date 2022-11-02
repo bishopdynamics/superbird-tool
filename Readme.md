@@ -92,6 +92,8 @@ options:
   --enable_uart_shell   enable UART shell
   --disable_avb2        disable A/B booting, lock to A
   --enable_burn_mode    enable USB Burn Mode at every boot (when connected to USB host)
+  --enable_burn_mode_button
+                        enable USB Burn Mode if preset button 4 is held while booting (when connected to USB host)
   --disable_burn_mode   Disable USB Burn Mode at every boot (when connected to USB host)
   --disable_charger_check
                         disable check for valid charger at boot

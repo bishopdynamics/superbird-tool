@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.4
+* fixed #2 & #4 - wrong encoding when sending env to device
+
 ## 0.0.3
 * added `--enable_burn_mode_button` thanks to lmore337!
 

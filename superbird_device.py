@@ -177,11 +177,11 @@ class SuperbirdDevice:
 
     def send_env(self, env_string:str):
         """ send given env string to device, space-separated kernel args on one line """
-        env_size = len(env_string.encode('utf-8'))
+        env_size = len(env_string.encode('ascii'))
         self.print('initializing env subsystem')
         self.bulkcmd('amlmmc env')  # initialize env subsystem
         self.print(f'sending env ({env_size} bytes)')
-        self.write(self.ADDR_TMP, env_string.encode('utf-8'))  # write env string somewhere
+        self.write(self.ADDR_TMP, env_string.encode('ascii'))  # write env string somewhere
         self.bulkcmd(f'env import -t {hex(self.ADDR_TMP)} {hex(env_size)}')  # read env from string
 
     def send_env_file(self, env_file:str):

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.5
+* Added boot slot selection to `--boot_adb_kernel` & `--disable_avb`.
+
 ## 0.0.4
 * fixed #2 & #4 - wrong encoding when sending env to device
 

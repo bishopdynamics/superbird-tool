@@ -17,7 +17,7 @@ from uboot_env import read_environ
 from superbird_device import SuperbirdDevice
 from superbird_device import find_device, check_device_mode
 
-VERSION = '0.0.4'
+VERSION = '0.0.5'
 
 def convert_env_dump(env_dump:str, env_file:str):
     """ convert a dumped env partition image into a human-readable text file """
@@ -40,9 +40,9 @@ if __name__ == "__main__":
     argument_parser.add_argument('--burn_mode', action='store_true', help='enter USB Burn Mode (if currently in USB Mode)')
     argument_parser.add_argument('--continue_boot', action='store_true', help='continue booting normally (if currently in USB Burn Mode)')
     argument_parser.add_argument('--bulkcmd', action='store', type=str, nargs=1, metavar=('COMMAND'), help='run a uboot command on the device')
-    argument_parser.add_argument('--boot_adb_kernel', action='store_true', help='boot a kernel with adb enabled (not persistent)')
+    argument_parser.add_argument('--boot_adb_kernel', action='store', type=str, nargs=1, metavar=('BOOT_SLOT'), help='boot a kernel with adb enabled on chosen slot (A or B)(not persistent)')
     argument_parser.add_argument('--enable_uart_shell', action='store_true', help='enable UART shell')
-    argument_parser.add_argument('--disable_avb2', action='store_true', help='disable A/B booting, lock to A')
+    argument_parser.add_argument('--disable_avb2', action='store', type=str, nargs=1, metavar=('BOOT_SLOT'), help='disable A/B booting, lock to chosen slot(A or B)')
     argument_parser.add_argument('--enable_burn_mode', action='store_true', help='enable USB Burn Mode at every boot (when connected to USB host)')
     argument_parser.add_argument('--enable_burn_mode_button', action='store_true', help='enable USB Burn Mode if preset button 4 is held while booting (when connected to USB host)')
     argument_parser.add_argument('--disable_burn_mode', action='store_true', help='Disable USB Burn Mode at every boot (when connected to USB host)')
@@ -89,7 +89,15 @@ if __name__ == "__main__":
             dev.bulkcmd(BULKCMD_STRING)
     elif args.boot_adb_kernel:
         if check_device_mode('usb-burn'):
-            FILE_ENV = 'images/env.txt'
+            slot = args.boot_adb_kernel[0]
+            if slot.lower() not in ['a', 'b']:
+                print('Invalid slot provided, using slot a')
+                slot = 'a'
+            print('Booting adb kernel on slot', slot)
+            if slot.lower() == 'a':
+                FILE_ENV = 'images/env_a.txt'
+            elif slot.lower() == 'b':
+                FILE_ENV = 'images/env_b.txt'
             FILE_KERNEL = 'images/superbird.kernel.img'
             FILE_INITRD = 'images/superbird.initrd.img'
             dev.boot(FILE_ENV, FILE_KERNEL, FILE_INITRD)
@@ -108,7 +116,12 @@ if __name__ == "__main__":
             dev.bulkcmd('env save')
     elif args.disable_avb2:
         if check_device_mode('usb-burn'):
-            print('Disabling A/B booting, forever A')
+            slot = args.disable_avb2[0]
+            if slot.lower() not in ['a', 'b']:
+                print('Invalid slot provided, using slot a')
+                slot = 'a'
+            print('Disabling A/B booting locking to slot:', slot)
+
             dev.bulkcmd('amlmmc env')
             dev.bulkcmd(r'setenv storeargs ${storeargs} setenv avb2 0\;')
             dev.bulkcmd('setenv initargs init=/sbin/pre-init')
@@ -119,9 +132,14 @@ if __name__ == "__main__":
             dev.bulkcmd(r'setenv initargs "${initargs} console=ttyS0,115200n8"')
             dev.bulkcmd(r'setenv initargs "${initargs} no_console_suspend"')
             dev.bulkcmd(r'setenv initargs "${initargs} earlycon=aml-uart,0xff803000"')
-            dev.bulkcmd(r'setenv initargs "${initargs} ro root=/dev/mmcblk0p14"')
-            dev.bulkcmd('setenv active_slot _a')
-            dev.bulkcmd('setenv boot_part boot_a')
+            if slot.lower() == 'a':
+                dev.bulkcmd(r'setenv initargs "${initargs} ro root=/dev/mmcblk0p14"')
+                dev.bulkcmd('setenv active_slot _a')
+                dev.bulkcmd('setenv boot_part boot_a')
+            elif slot.lower() == 'b':
+                dev.bulkcmd(r'setenv initargs "${initargs} ro root=/dev/mmcblk0p15"')
+                dev.bulkcmd('setenv active_slot _b')
+                dev.bulkcmd('setenv boot_part boot_b')
             dev.bulkcmd('env save')
     elif args.enable_burn_mode:
         if check_device_mode('usb-burn'):

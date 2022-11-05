@@ -4,6 +4,7 @@ Wrapper for performing tasks on superbird device
 """
 # pylint: disable=line-too-long,broad-except
 
+import os
 import sys
 import time
 import traceback
@@ -87,6 +88,37 @@ def check_device_mode(mode:str):
         return False
     return True
 
+def enter_burn_mode(dev):
+    """ check device mode and enter burn mode if needed
+        returns a new device object, or None if failure
+    """
+    dev_mode = find_device()
+    if dev_mode == 'usb-burn':
+        return dev
+    elif dev_mode == 'usb':
+        print('Entering USB Burn Mode')
+        dev.bl2_boot('images/superbird.bl2.encrypted.bin', 'images/superbird.bootloader.img')
+        print('Waiting for device...')
+        time.sleep(5)  # wait for it to boot up in USB Burn Mode
+        if check_device_mode('usb-burn'):
+            print('Device is now in USB Burn Mode')
+            dev = SuperbirdDevice()
+            time.sleep(0.5)
+            dev.bulkcmd('amlmmc part 1')
+            return dev
+        else:
+            print('Failed to enter USB Burn Mode!')
+            return None
+    else:
+        print(f'Cannot enter burn mode from current mode: {dev_mode}')
+        return None
+
+def stdout_clear_lines(num:int=1):
+    """ un-print the last N lines """
+    while num > 0:
+        sys.stdout.write("\x1b[1A\x1b[2K")  # move cursor up one line, and delete that whole line
+        num -= 1
+
 class SuperbirdDevice:
     """ convenience wrapper for superbird device """
     ADDR_BL2 = 0xfffa0000
@@ -98,6 +130,11 @@ class SuperbirdDevice:
     TIMEOUT_COMMANDS = ['booti', 'bootm', 'bootp', 'mw.b', 'reset', 'reboot']
     PARTITIONS = SUPERBIRD_PARTITIONS
     PART_SECTOR_SIZE = 512  # bytes, size of sectors used in partition table
+    TRANSFER_BLOCK_SIZE = 8 * PART_SECTOR_SIZE  # 4KB data transfered into memory one block at a time
+    WRITE_CHUNK_SIZE = 1024 * PART_SECTOR_SIZE  # 512KB chunk written to memory, then gets written to mmc
+    READ_CHUNK_SIZE = 256 * PART_SECTOR_SIZE  # 128KB chunk read from mmc into memory, then read out to local file
+    # writes larger than threshold will be broken into chunks of WRITE_CHUNK_SIZE
+    TRANSFER_SIZE_THRESHOLD = 4 * 1024 * 1024  # 4MB
 
     def __init__(self) -> None:
         try:
@@ -142,11 +179,13 @@ class SuperbirdDevice:
         if not silent:
             self.print(f' executing bulkcmd: "{command}"')
         try:
-            response = self.device.bulkCmd(command)
+            resp = self.device.bulkCmd(command)
+            response = self.decode(resp)
             if not silent:
-                self.print(f'  result: {self.decode(response)}')
-            if 'failed' in self.decode(response):
-                raise Exception(f'Bulkcmd failed: {command}')
+                self.print(f'  result: {response}')
+            if 'success' not in response:
+                self.print(f'Bulkcmd failed: {command} -> {response}')
+                raise Exception('Bulkcmd failed')
         except USBTimeoutError:
             # if you use booti or mw.b, it wont return, thus will raise USBTimeoutError
             if [word for word in self.TIMEOUT_COMMANDS if word in command] or ignore_timeout:
@@ -201,7 +240,8 @@ class SuperbirdDevice:
 
     def bl2_boot(self, bl2_file:str, bootloader_file:str):
         """ send a bl2 and then chain a uboot image with it """
-        self.send_file(bl2_file, self.ADDR_BL2, chunk_size=4096, append_zeros=False)
+        # TODO there is something wrong with bl2_boot
+        self.send_file(bl2_file, self.ADDR_BL2, chunk_size=4096, append_zeros=True)
         self.device.run(self.ADDR_BL2)
         data = None
         with open(bootloader_file, 'rb') as blf:
@@ -258,62 +298,156 @@ class SuperbirdDevice:
                 break
         return data
 
-    def dump_partition(self, part_name:str, outfile:str,):
+    def validate_partition_size(self, part_name):
+        """ Validate the partition size by attempting to read the last sector
+            returns tuple of: correct partition size (or None if invalid), and partition offset (or None if invalid)
+        """
+        if part_name not in self.PARTITIONS:
+            self.print(f'Error: Invalid partition name: "{part_name}"')
+            return (None, None)
+        if part_name == 'cache':
+            self.print('The "cache" partition is zero-length on superbird, you cannot read or write to it!')
+            return (None, None)
+        if part_name in ['reserved']:
+            self.print('The "reserved" partition cannot be read or writen!')
+            return (None, None)
+        part_size = self.PARTITIONS[part_name]['size'] * self.PART_SECTOR_SIZE
+        part_offset = self.PARTITIONS[part_name]['offset']
+        print(f'Validating size of partition: {part_name} size: {hex(part_size)} {round(part_size / 1024 / 1024)}MB - ...')
+        try:
+            self.bulkcmd(f'amlmmc read {part_name} {hex(self.ADDR_TMP)} {hex(part_size - self.PART_SECTOR_SIZE)} {hex(self.PART_SECTOR_SIZE)}', silent=True)
+        except Exception as extest:
+            stdout_clear_lines(2)
+            print(f'Validating size of partition: {part_name} size: {hex(part_size)} {round(part_size / 1024 / 1024)}MB - FAIL')
+            if part_name == 'data':
+                part_size = self.PARTITIONS[part_name]['size_alt'] * self.PART_SECTOR_SIZE
+                print(f'Failed while fetching last chunk of partition: {part_name}, trying alternate size: {hex(part_size)} {round(part_size / 1024 / 1024)}MB')
+                print(f'Validating size of partition: {part_name} size: {hex(part_size)} {round(part_size / 1024 / 1024)}MB - ...')
+                try:
+                    self.bulkcmd(f'amlmmc read {part_name} {hex(self.ADDR_TMP)} {hex(part_size - self.PART_SECTOR_SIZE)} {hex(self.PART_SECTOR_SIZE)}', silent=True)
+                except Exception as extestt:
+                    stdout_clear_lines(2)
+                    print(f'Validating size of partition: {part_name} size: {hex(part_size)} {round(part_size / 1024 / 1024)}MB - FAIL')
+                    print(f'Failed while validating size of partition: {part_name}, is partition size {hex(part_size)} correct? error: {extestt}')
+                    return (None, None)
+            else:
+                print(f'Failed while validating size of partition: {part_name}, is partition size {hex(part_size)} correct? error: {extest}')
+                return (None, None)
+        stdout_clear_lines(1)
+        print(f'Validating size of partition: {part_name} size: {hex(part_size)} {round(part_size / 1024 / 1024)}MB - OK')
+        return (part_size, part_offset)
+
+    def dump_partition(self, part_name:str, outfile:str):
         """ dump given partition to a file
                 we cannot access the mmc directly,
                 but we can read from mmc into memory,
                 so we read it into memory, then read it from memory and append it to file, one chunk at a time
                 this is excruciatingly slow, compared to dumping using the offical amlogic tool, about 500KB/s, roughly 110 minutes to dump
         """
-        chunk_size = 256 * self.PART_SECTOR_SIZE  # 256 sectors seems to be the sweet spot based on time trials
-        if part_name not in self.PARTITIONS:
-            raise ValueError(f'Invalid partition name: {part_name}')
-        # part_offset = self.PARTITIONS[part_name]['offset']
-        part_size = self.PARTITIONS[part_name]['size'] * self.PART_SECTOR_SIZE
-        self.bulkcmd('amlmmc env', silent=True)  # initialize amlmmc subsystem
-        time.sleep(0.2)
-        # first we try to read the LAST chunk into memory, to see if it exceeds the bounds of the partition
-        print(f'validating partition size:{hex(part_size)}')
-        try:
-            self.bulkcmd(f'amlmmc read {part_name} {hex(self.ADDR_TMP)} {hex(part_size - chunk_size)} {hex(chunk_size)}', silent=True)
-        except Exception as extest:
-            if part_name == 'data':
-                part_size = self.PARTITIONS[part_name]['size_alt'] * self.PART_SECTOR_SIZE
-                print(f'Failed while fetching last chunk of partition: {part_name}, trying alternate size: {hex(part_size)}')
-                print(f'validating partition size:{hex(part_size)}')
-                try:
-                    self.bulkcmd(f'amlmmc read {part_name} {hex(self.ADDR_TMP)} {hex(part_size - chunk_size)} {hex(chunk_size)}', silent=True)
-                except Exception as extestt:
-                    print(f'Failed while testing last chunk of partition: {part_name}, is partition size {hex(part_size)} correct? error: {extestt}')
-                    sys.exit(1)
-            else:
-                print(f'Failed while testing last chunk of partition: {part_name}, is partition size {hex(part_size)} correct? error: {extest}')
+        (part_size, part_offset) = self.validate_partition_size(part_name)
+        if part_size is None:
+            raise ValueError('Failed to validate partition size!')
+        else:
+            chunk_size = self.READ_CHUNK_SIZE
+            # now we are ready to actually dump the partition
+            try:
+                # open(outfile, 'wb').close()  # empty the file
+                with open(outfile, 'wb') as ofl:
+                    offset = 0
+                    if part_name == 'bootloader':
+                        # when writing bootloader, it is actually written one sector after beginning of the partition
+                        offset = self.PART_SECTOR_SIZE
+                    first_chunk = True
+                    last_chunk = False
+                    remaining = part_size
+                    start_time = time.time()
+                    while remaining:
+                        if first_chunk:
+                            first_chunk = False
+                        else:
+                            stdout_clear_lines(2)
+                        if remaining <= chunk_size:
+                            chunk_size = remaining
+                            last_chunk = True
+                        progress = round((offset / part_size) * 100)
+                        elapsed = time.time() - start_time
+                        speed = round((offset / elapsed) / 1024)  # in KB/s
+                        self.print(f'dumping partition: "{part_name}" {hex(part_offset)}+{hex(offset)} into file: {outfile} ')
+                        self.print(f'chunk_size: {chunk_size / 1024}KB, speed: {speed}KB/s progress: {progress}% remaining: {round(remaining / 1024 / 1024)}MB / {round(part_size / 1024 / 1024)}MB')
+                        self.bulkcmd(f'amlmmc read {part_name} {hex(self.ADDR_TMP)} {hex(offset)} {hex(chunk_size)}', silent=True)
+                        rdata = self.read_memory(self.ADDR_TMP, chunk_size)
+                        ofl.raw.write(rdata)
+                        ofl.flush()
+                        if last_chunk:
+                            break
+                        offset += chunk_size
+                        remaining -= chunk_size
+            except Exception as ex:
+                # in the event of any failure while reading partitions,
+                #   force the entire script to exit
+                print(f'Error while reading partition {part_name}, {ex}')
+                print(traceback.format_exc())
                 sys.exit(1)
-        time.sleep(0.2)
-        # now we are ready to actually dump the partition
-        open(outfile, 'wb').close()  # empty the file
-        with open(outfile, 'ab') as ofl:
-            offset = 0
-            first_chunk = True
-            last_chunk = False
-            remaining = part_size
-            while remaining:
-                if first_chunk:
-                    first_chunk = False
-                else:
-                    sys.stdout.write("\x1b[1A\x1b[2K")  # move cursor up one line, and delete that whole line
-                if remaining <= chunk_size:
-                    chunk_size = remaining
-                    last_chunk = True
-                progress = round((offset / part_size) * 100)
-                self.print(f'dumping partition: "{part_name}" offset: {hex(offset)} chunk_size: {chunk_size / 1024}KB, into file: {outfile} progress: {progress}%')
-                self.bulkcmd(f'amlmmc read {part_name} {hex(self.ADDR_TMP)} {hex(offset)} {hex(chunk_size)}', silent=True)
-                time.sleep(0.2)
-                rdata = self.read_memory(self.ADDR_TMP, chunk_size)
-                ofl.raw.write(rdata)
-                ofl.flush()
-                time.sleep(0.2)
-                if last_chunk:
-                    break
-                offset += chunk_size
-                remaining -= chunk_size
+
+    def restore_partition(self, part_name:str, infile:str):
+        """ Restore given partition from given dump
+            Like with dump_partition, we first have to read it into RAM, then instruct the device to write it to mmc, one chunk at a time
+        """
+        (part_size, part_offset) = self.validate_partition_size(part_name)
+        if part_size is None:
+            raise ValueError('Failed to validate partition size!')
+        else:
+            try:
+                chunk_size = self.WRITE_CHUNK_SIZE
+                file_size = os.path.getsize(infile)
+                if part_name == 'bootloader':
+                    # bootloader is only 2MB, but dumps are often zero-padded to 4MB
+                    part_size = 2 * 1024 * 1024
+                    file_size = part_size
+                if file_size > part_size:
+                    raise ValueError(f'File is larger than target partition: {file_size} vs {part_size}')
+                if file_size <= self.TRANSFER_SIZE_THRESHOLD:
+                    # 4MB and lower, send as one chunk
+                    chunk_size = file_size
+                with open(infile, 'rb') as ifl:
+                    # now we are ready to actually write to the partition
+                    offset = 0
+                    first_chunk = True
+                    last_chunk = False
+                    remaining = part_size
+                    start_time = time.time()
+                    # TODO right now get_status always fails, it does not seem to be tracking our write progress
+                    # self.device.bulkCmd(f'download store {part_name} normal {hex(part_size)}')
+                    while remaining:
+                        if first_chunk:
+                            first_chunk = False
+                        else:
+                            stdout_clear_lines(2)
+                        if remaining <= chunk_size:
+                            chunk_size = remaining
+                            last_chunk = True
+                        progress = round((offset / part_size) * 100)
+                        elapsed = time.time() - start_time
+                        speed = round((offset / elapsed) / 1024 / 1024, 2)  # in MB/s
+                        data = ifl.read(chunk_size)
+                        remaining -= chunk_size
+                        self.print(f'writing partition: "{part_name}" {hex(part_offset)}+{hex(offset)} from file: {infile}')
+                        self.print(f'chunk_size: {chunk_size / 1024}KB, speed: {speed}MB/s progress: {progress}% remaining: {round(remaining / 1024 / 1024)}MB / {round(part_size / 1024 / 1024)}MB')
+                        self.device.writeLargeMemory(self.ADDR_TMP, data, self.TRANSFER_BLOCK_SIZE, appendZeros=False)
+                        if part_name == 'bootloader':
+                            # bootloader always causes timeout
+                            self.bulkcmd(f'amlmmc write {part_name} {hex(self.ADDR_TMP)} {hex(offset)} {hex(chunk_size)}', silent=True, ignore_timeout=True)
+                            time.sleep(2)  # let bootloader settle
+                        else:
+                            self.bulkcmd(f'amlmmc write {part_name} {hex(self.ADDR_TMP)} {hex(offset)} {hex(chunk_size)}', silent=True)
+                        offset += chunk_size
+                        if last_chunk:
+                            break
+                    # self.bulkcmd('download get_status', silent=False)  #  get_status always fails
+            except Exception as ex:
+                # in the event of any failure while writing partitions,
+                #   force the entire script to exit to prevent further possible damage
+                print(f'Error while restoring partition {part_name}, {ex}')
+                print(traceback.format_exc())
+                sys.exit(1)
+            

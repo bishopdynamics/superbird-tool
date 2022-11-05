@@ -12,7 +12,7 @@ Partitions for superbird, extracted from output of: bulkcmd 'amlmmc part 1'
 SUPERBIRD_PARTITIONS = {
     'bootloader': {
         'offset': 0,
-        'size': 8192,
+        'size': 4096,
     },
     'reserved': {
         'offset': 73728,

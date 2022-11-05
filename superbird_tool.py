@@ -17,7 +17,7 @@ from uboot_env import read_environ
 from superbird_device import SuperbirdDevice
 from superbird_device import find_device, check_device_mode, enter_burn_mode
 
-VERSION = '0.0.6'
+VERSION = '0.0.7'
 
 def convert_env_dump(env_dump:str, env_file:str):
     """ convert a dumped env partition image into a human-readable text file """

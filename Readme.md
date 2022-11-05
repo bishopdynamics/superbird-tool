@@ -36,7 +36,7 @@ The copy rate for reading is about `545KB/s`, and in my testing on Ubuntu x86_64
 The same thing must be done in reverse to restore a partition, but writing is much faster, and we can use larger chunks (512KB), 
 so copy rate for writing is about `4.9MB/s`, and it takes about 17 minutes to write all partitions.
 
-Partitions 4MB and smaller can be written in a single chunk, but using 2MB or 4MB chunks for larger partitions eventually fails about 300MB through; I have not yet figured out why.
+Partitions 2MB and smaller can be written in a single chunk, but using 2MB chunks for larger partitions eventually fails about 300MB through; I have not yet figured out why.
 In the meantime, it seems that 512KB chunks work well for larger partitions.
 
 ## Supported Platforms

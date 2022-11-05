@@ -134,7 +134,7 @@ class SuperbirdDevice:
     WRITE_CHUNK_SIZE = 1024 * PART_SECTOR_SIZE  # 512KB chunk written to memory, then gets written to mmc
     READ_CHUNK_SIZE = 256 * PART_SECTOR_SIZE  # 128KB chunk read from mmc into memory, then read out to local file
     # writes larger than threshold will be broken into chunks of WRITE_CHUNK_SIZE
-    TRANSFER_SIZE_THRESHOLD = 4 * 1024 * 1024  # 4MB
+    TRANSFER_SIZE_THRESHOLD = 2 * 1024 * 1024  # 2MB
 
     def __init__(self) -> None:
         try:
@@ -195,6 +195,7 @@ class SuperbirdDevice:
                 self.print(' Error: bulkcmd timed out!')
                 self.print(' This can happen if the device ends up in a strange state, like as the result of a previously failed command')
                 self.print(' Try power cycling the device by pulling the cable, and then boot up and try again')
+                self.print('  You might need to do this multiple times')
                 self.print('    If the device is connected through a USB hub, try connecting it directly to a port on your machine')
                 sys.exit(1)
         except USBError:
@@ -206,6 +207,7 @@ class SuperbirdDevice:
                 self.print(' Error: bulkcmd timed out!')
                 self.print(' This can happen if the device ends up in a strange state, like as the result of a previously failed command')
                 self.print(' Try power cycling the device by pulling the cable, and then boot up and try again')
+                self.print('  You might need to do this multiple times')
                 self.print('    If the device is connected through a USB hub, try connecting it directly to a port on your machine')
                 sys.exit(1)
 
@@ -407,7 +409,7 @@ class SuperbirdDevice:
                 if file_size > part_size:
                     raise ValueError(f'File is larger than target partition: {file_size} vs {part_size}')
                 if file_size <= self.TRANSFER_SIZE_THRESHOLD:
-                    # 4MB and lower, send as one chunk
+                    # 2MB and lower, send as one chunk
                     chunk_size = file_size
                 with open(infile, 'rb') as ifl:
                     # now we are ready to actually write to the partition

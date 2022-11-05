@@ -373,7 +373,11 @@ class SuperbirdDevice:
                             last_chunk = True
                         progress = round((offset / part_size) * 100)
                         elapsed = time.time() - start_time
-                        speed = round((offset / elapsed) / 1024)  # in KB/s
+                        if elapsed < 1:
+                            # on a quick enough system, elapsed can be zero, and cause divbyzero error when calculating speed
+                            speed = 0
+                        else:
+                            speed = round((offset / elapsed) / 1024)  # in KB/s
                         self.print(f'dumping partition: "{part_name}" {hex(part_offset)}+{hex(offset)} into file: {outfile} ')
                         self.print(f'chunk_size: {chunk_size / 1024}KB, speed: {speed}KB/s progress: {progress}% remaining: {round(remaining / 1024 / 1024)}MB / {round(part_size / 1024 / 1024)}MB')
                         self.bulkcmd(f'amlmmc read {part_name} {hex(self.ADDR_TMP)} {hex(offset)} {hex(chunk_size)}', silent=True)
@@ -430,7 +434,11 @@ class SuperbirdDevice:
                             last_chunk = True
                         progress = round((offset / part_size) * 100)
                         elapsed = time.time() - start_time
-                        speed = round((offset / elapsed) / 1024 / 1024, 2)  # in MB/s
+                        if elapsed < 1:
+                            # on a quick enough system, elapsed can be zero, and cause divbyzero error when calculating speed
+                            speed = 0
+                        else:
+                            speed = round((offset / elapsed) / 1024 / 1024, 2)  # in MB/s
                         data = ifl.read(chunk_size)
                         remaining -= chunk_size
                         self.print(f'writing partition: "{part_name}" {hex(part_offset)}+{hex(offset)} from file: {infile}')

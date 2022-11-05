@@ -17,7 +17,7 @@ from uboot_env import read_environ
 from superbird_device import SuperbirdDevice
 from superbird_device import find_device, check_device_mode, enter_burn_mode
 
-VERSION = '0.0.7'
+VERSION = '0.0.8'
 
 def convert_env_dump(env_dump:str, env_file:str):
     """ convert a dumped env partition image into a human-readable text file """
@@ -255,7 +255,7 @@ if __name__ == '__main__':
             dev.restore_partition('system_b', f'{FOLDER_NAME}/system_b.ext2')
             # handle data partition last
             if not os.path.exists(f'{FOLDER_NAME}/data.ext4'):
-                print('did not find {FOLDER_NAME}/data.ext4, erasing data partition instead')
+                print(f'did not find {FOLDER_NAME}/data.ext4, erasing data partition instead')
                 dev.bulkcmd('amlmmc erase data')
             else:
                 # test if data.ext4 is actually all zeros (dumped a wiped filesystem)

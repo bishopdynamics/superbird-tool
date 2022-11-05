@@ -236,7 +236,9 @@ ip addr  # you should see usb0 listed
 
 I have provided a (very barebones) script to generate a standalone `superbird_tool` binary using `nuitka`.
 
-You need to install `nuitka` and `ordered-set` packages from pip to use it.
+You need to install `nuitka`, `zstandard` and `ordered-set` packages from pip to use it.
+
+On Linux, you also need to install `patchelf` from your system package manager. ex: `sudo apt-get install -y patchelf`
 
 I have not tested this much yet, just a neat idea for now.
 

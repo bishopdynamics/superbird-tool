@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.8
+* fix rare divide-by-zero case when reading or writing partitions
+* tweaked how experimental `make-binary.sh` works
+
 ## 0.0.7
 * reduced write single-chunk threshold to 2MB, seems 4MB was too ambitious to be reliable
 

@@ -11,7 +11,7 @@
 #   more info, including for windows https://learn.adafruit.com/turning-your-raspberry-pi-zero-into-a-usb-gadget/ethernet-gadget
 #   a gist that was helpful: https://gist.github.com/geekman/5bdb5abdc9ec6ac91d5646de0c0c60c4
 
-
+echo "configuring USB Gadget with adb and rndis"
 # first we create some device nodes
 mkdir -p /dev/usb-ffs
 mkdir -p /dev/usb-ffs/adb
@@ -62,6 +62,7 @@ ln -s /sys/kernel/config/usb_gadget/g1/functions/rndis.usb0 /sys/kernel/config/u
 mount -t functionfs adb /dev/usb-ffs/adb
 
 # kick off the adb daemon in the background, and give it time to initialize
+echo "starting adb daemon"
 /usr/bin/adbd &
 sleep 5s
 
@@ -70,9 +71,18 @@ sleep 5s
 UDC_DEVICE=$(ls -1 /sys/class/udc/)
 echo "$UDC_DEVICE" > /sys/kernel/config/usb_gadget/g1/UDC
 
+sleep 3s
+
+echo "bringing up usb0"
 # bring up the usb0 interface
 ifconfig usb0 up
 ifconfig usb0 192.168.7.2 netmask 255.255.255.0 broadcast 192.168.7.255
 
+# give some time for usb0 to be ready
+sleep 3s
+
+echo "adding routes for usb0"
 # set routing to use the usb0 interface
-route add default via 192.168.7.1 dev usb0
+# route add default via 192.168.7.1 dev usb0
+ip route add default via 192.168.7.1 dev usb0
+

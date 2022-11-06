@@ -39,7 +39,8 @@ function append_if_missing() {
 set -e  # bail on any errors
 
 # install needed packages
-apt install -y git htop build-essential cmake python3 python3-dev python3-pip iptables adb android-sdk-platform-tools-common
+export DEBIAN_FRONTEND=noninteractive
+apt install -y git htop build-essential cmake python3 python3-dev python3-pip iptables adb android-sdk-platform-tools-common iptables-persistent
 python3 -m pip install virtualenv nuitka ordered-set
 python3 -m pip install git+https://github.com/superna9999/pyamlboot
 

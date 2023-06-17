@@ -79,10 +79,14 @@ On Windows, you need to download and install python3 (recommend 3.10.8) from [py
 python -m pip install git+https://github.com/superna9999/pyamlboot
 python superbird_tool.py
 ```
-
+If you're getting a device not found error despite the car thing showing up in device manager, you may need libusb. Here's how to install it:
+1. Download `libusb-1.0.26-binaries.7z` from here: https://github.com/libusb/libusb/releases
+2. Extract all the files then go into the VS2015 folder that matches your CPU architecture
+3. Go into the dll folder then copy libusb-1.0.dll to a folder where you can work with it.
+4. Just to be safe, run the file thru VirusTotal or a similar service and make sure the SHA256 hash matches this: `1dac95d1eafcba057cf3df73dcf419bc14f4167ef4ac92fe1f8fdcab4278b6f4`
+5. If it matches, just copy the file to `C:\Windows\System32` then try running superbird-tool again.
 
 ## Usage
-
 ```
 Options cannot be combined; do one thing at a time :)
 

@@ -313,7 +313,15 @@ if __name__ == '__main__':
             dev.bulkcmd('env save')
             print('The device will now check for valid charger, requiring you to press menu button to bypass')
     elif args.burn_mode:
-        dev = enter_burn_mode(dev)
+        if check_device_mode('usb'):
+            print('Entering USB Burn Mode')
+            dev.bl2_boot('images/superbird.bl2.encrypted.bin', 'images/superbird.bootloader.img')
+            print('Waiting for device...')
+            time.sleep(5)  # wait for it to boot up in USB Burn Mode
+            if check_device_mode('usb-burn'):
+                print('Device is now in USB Burn Mode')
+            else:
+                print('Failed to enter USB Burn Mode!')
     elif args.continue_boot:
         if check_device_mode('usb-burn'):
             print('Continuing boot...')

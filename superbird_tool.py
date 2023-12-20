@@ -17,7 +17,7 @@ from uboot_env import read_environ
 from superbird_device import SuperbirdDevice
 from superbird_device import find_device, check_device_mode, enter_burn_mode
 
-VERSION = '0.0.8'
+VERSION = '0.0.9'
 
 def convert_env_dump(env_dump:str, env_file:str):
     """ convert a dumped env partition image into a human-readable text file """
@@ -208,7 +208,8 @@ if __name__ == '__main__':
             os.mkdir(FOLDER_NAME)
             dev.dump_partition('bootloader', f'{FOLDER_NAME}/bootloader.dump')
             dev.dump_partition('env', f'{FOLDER_NAME}/env.dump')
-            # convert dumped env to text version
+            # convert dumped env to txt version, for ease of access, 
+            #   and so it is present when restoring later
             convert_env_dump(f'{FOLDER_NAME}/env.dump', f'{FOLDER_NAME}/env.txt')
             dev.dump_partition('fip_a', f'{FOLDER_NAME}/fip_a.dump')
             dev.dump_partition('fip_b', f'{FOLDER_NAME}/fip_b.dump')
@@ -232,14 +233,26 @@ if __name__ == '__main__':
             FOLDER_NAME = args.restore_device[0]
             print(f'restoring entire device from dumpfiles in {FOLDER_NAME}')
             FILE_LIST = [
-                'bootloader.dump', 'env.dump', 'fip_a.dump', 'fip_b.dump', 'logo.dump', 'dtbo_a.dump', 'dtbo_b.dump', 'vbmeta_a.dump',
+                'fip_a.dump', 'fip_b.dump', 'logo.dump', 'dtbo_a.dump', 'dtbo_b.dump', 'vbmeta_a.dump',
                 'vbmeta_b.dump', 'boot_a.dump', 'boot_b.dump', 'misc.dump', 'settings.ext4', 'system_a.ext2', 'system_b.ext2',
             ]
             for part_name in FILE_LIST:
-                if not os.path.exists(f'{FOLDER_NAME}/{part_name}'):
+                if not os.path.isfile(f'{FOLDER_NAME}/{part_name}'):
                     print(f'Error: missing expected dump file: {FOLDER_NAME}/{part_name}')
                     sys.exit(1)
-            dev.restore_partition('env', f'{FOLDER_NAME}/env.dump')
+            # we use the .txt instead of .dump because sometimes the partition size does not line up perfectly
+            #   also probably the safer way to interact with env partition
+            #   if txt version does not exist, we create it for you
+            if not os.path.isfile(f'{FOLDER_NAME}/env.txt'):
+                if not os.path.isfile(f'{FOLDER_NAME}/env.dump'):
+                    print(f'Error: missing expected dump file: {FOLDER_NAME}/env.dump')
+                    sys.exit(1)
+                convert_env_dump(f'{FOLDER_NAME}/env.dump', f'{FOLDER_NAME}/env.txt')
+            print('Wiping env partition')
+            dev.bulkcmd('amlmmc env')
+            dev.bulkcmd('amlmmc erase env')
+            dev.send_env_file(f'{FOLDER_NAME}/env.txt')
+            dev.bulkcmd('env save')
             dev.restore_partition('fip_a', f'{FOLDER_NAME}/fip_a.dump')
             dev.restore_partition('fip_b', f'{FOLDER_NAME}/fip_b.dump')
             dev.restore_partition('logo', f'{FOLDER_NAME}/logo.dump')

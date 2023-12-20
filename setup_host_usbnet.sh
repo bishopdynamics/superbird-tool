@@ -41,10 +41,12 @@ set -e  # bail on any errors
 # install needed packages
 export DEBIAN_FRONTEND=noninteractive
 apt install -y git htop build-essential cmake python3 python3-dev python3-pip iptables adb android-sdk-platform-tools-common iptables-persistent
-python3 -m pip install virtualenv nuitka ordered-set
-python3 -m pip install git+https://github.com/superna9999/pyamlboot
+python3 -m pip install --break-system-packages virtualenv nuitka ordered-set
+python3 -m pip install --break-system-packages git+https://github.com/superna9999/pyamlboot
 
-
+# fix usb enumeration when connecting superbird in maskroom mode
+echo '# Amlogic S905 series can be booted up in Maskrom Mode, and it needs a rule to show up correctly' > /etc/udev/rules.d/70-carthing-maskrom-mode.rules
+echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="1b8e", ATTR{idProduct}=="c003", MODE:="0666", SYMLINK+="worldcup"' >> /etc/udev/rules.d/70-carthing-maskrom-mode.rules
 
 # prevent systemd / udev from renaming usb network devices by mac address
 remove_if_exists /lib/systemd/network/73-usb-net-by-mac.link

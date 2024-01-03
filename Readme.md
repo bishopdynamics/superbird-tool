@@ -13,6 +13,8 @@ Contributions are welcome. This code is unlicensed: you can do whatever you want
 
 A [Changelog can be found here](Changelog.md)
 
+NOTE: This is not working well on Windows anymore due to issues with libusb, I suggest using Linux or macOS.
+
 ## Warranty and Liability
 
 None. You definitely can mess up your device in ways that are difficult to recover. I cannot promise a bug in this script will not brick your device.
@@ -56,7 +58,7 @@ On macOS, you must install `python3` and `libusb` from homebrew, and execute usi
 ```bash
 brew install python3 libusb
 /opt/homebrew/bin/python3 -m pip install git+https://github.com/superna9999/pyamlboot
-/opt/homebrew/bin/python3 superbird_tool.py
+/opt/homebrew/bin/python3 superbird_tool.py --find_device
 ```
 `root` is not needed on macOS
 
@@ -67,19 +69,42 @@ On Linux, you just need to install pyamlboot.
 However, `root` is needed on Linux, unless you fiddle with udev rules, which means the pip package also needs to be installed as `root`
 ```bash
 sudo python3 -m pip install git+https://github.com/superna9999/pyamlboot
-sudo ./superbird_tool.py
+sudo ./superbird_tool.py --find_device
 ```
 
 ### Windows
 
-Tested on `x86_64`
+Tested on `x86_64`, but it seems really difficult to get this working consistently on Windows. I recommend Linux or macOS.
 
-On Windows, you need to download and install python3 (recommend 3.10.8) from [python.org](https://www.python.org/downloads/windows/) and execute using `python` instead of `python3`. 
+On Windows, setup is a little more involved. First download and install [python for windows](https://www.python.org/downloads/windows/) (tested with 3.10 and 3.11). Then you need to install drivers; I have included [`windows/USB_Burning_Tool_setup_v2.0.9.exe`](windows/USB_Burning_Tool_setup_v2.0.9.exe), which includes the needed driver.
+The actual USB Burning Tool is not useful for Car Thing, but it includes the right driver.
+
+
+Next you need to install a couple extra packages:
 ```bash
 python -m pip install git+https://github.com/superna9999/pyamlboot
-python superbird_tool.py
+python -m pip install pyusb
+python -m pip install libusb
 ```
 
+You also need to add to add to your PATH: 
+
+```bat
+rem NOTE: Python310 for python 3.10.x
+%LOCALAPPDATA%\Programs\Python\Python310\Lib\site-packages\libusb\_platform\_windows\x64
+```
+This [stackoverflow post](https://stackoverflow.com/questions/44272416/how-to-add-a-folder-to-path-environment-variable-in-windows-10-with-screensho)
+has a good visual explanation of how to edit PATH in Windows 10
+
+And finally, you should be able to run the tool
+```bash
+python superbird_tool.py --find_device
+```
+
+Confirm things actually work by connecting device in USB Mode (hold buttons 1 & 4 while connecting), and then entering USB Burn Mode:
+```bash
+python superbird_tool.py --burn_mode
+```
 
 ## Usage
 
@@ -242,6 +267,4 @@ On Linux, you also need to install `patchelf` from your system package manager. 
 
 I have not tested this much yet, just a neat idea for now.
 
-Note that a compiled binary does not include `images/`, and will still look for them under the current working directory.
-
-If you are making binaries, you must use python version 3.10.8, as the newer 3.11 does not work with nuitka.
+Compilied binaries include `images/` so they should work fine standalone.

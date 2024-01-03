@@ -443,7 +443,7 @@ class SuperbirdDevice:
                         remaining -= chunk_size
                         self.print(f'writing partition: "{part_name}" {hex(part_offset)}+{hex(offset)} from file: {infile}')
                         self.print(f'chunk_size: {chunk_size / 1024}KB, speed: {speed}MB/s progress: {progress}% remaining: {round(remaining / 1024 / 1024)}MB / {round(part_size / 1024 / 1024)}MB')
-                        self.device.writeLargeMemory(self.ADDR_TMP, data, self.TRANSFER_BLOCK_SIZE, appendZeros=False)
+                        self.device.writeLargeMemory(self.ADDR_TMP, data, self.TRANSFER_BLOCK_SIZE, appendZeros=True)
                         if part_name == 'bootloader':
                             # bootloader always causes timeout
                             self.bulkcmd(f'amlmmc write {part_name} {hex(self.ADDR_TMP)} {hex(offset)} {hex(chunk_size)}', silent=True, ignore_timeout=True)

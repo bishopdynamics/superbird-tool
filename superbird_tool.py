@@ -12,12 +12,18 @@ import shutil
 import platform
 import tempfile
 
+from pathlib import Path
+
 from uboot_env import read_environ
 
 from superbird_device import SuperbirdDevice
 from superbird_device import find_device, check_device_mode, enter_burn_mode
 
 VERSION = '0.0.9'
+
+# this method chosen specifically because it works correctly when bundled using nuitka --onefile
+IMAGES_PATH = Path(os.path.dirname(__file__)).joinpath('images')
+
 
 def convert_env_dump(env_dump:str, env_file:str):
     """ convert a dumped env partition image into a human-readable text file """
@@ -99,11 +105,11 @@ if __name__ == '__main__':
                 SLOT = 'a'
             print('Booting adb kernel on slot', SLOT)
             if SLOT.lower() == 'a':
-                FILE_ENV = 'images/env_a.txt'
+                FILE_ENV = str(IMAGES_PATH.joinpath('env_a.txt'))
             elif SLOT.lower() == 'b':
-                FILE_ENV = 'images/env_b.txt'
-            FILE_KERNEL = 'images/superbird.kernel.img'
-            FILE_INITRD = 'images/superbird.initrd.img'
+                FILE_ENV = str(IMAGES_PATH.joinpath('env_b.txt'))
+            FILE_KERNEL = str(IMAGES_PATH.joinpath('superbird.kernel.img'))
+            FILE_INITRD = str(IMAGES_PATH.joinpath('superbird.initrd.img'))
             dev.boot(FILE_ENV, FILE_KERNEL, FILE_INITRD)
     elif args.enable_uart_shell:
         dev = enter_burn_mode(dev)
@@ -315,7 +321,7 @@ if __name__ == '__main__':
     elif args.burn_mode:
         if check_device_mode('usb'):
             print('Entering USB Burn Mode')
-            dev.bl2_boot('images/superbird.bl2.encrypted.bin', 'images/superbird.bootloader.img')
+            dev.bl2_boot(str(IMAGES_PATH.joinpath('superbird.bl2.encrypted.bin')), str(IMAGES_PATH.joinpath('superbird.bootloader.img')))
             print('Waiting for device...')
             time.sleep(5)  # wait for it to boot up in USB Burn Mode
             if check_device_mode('usb-burn'):

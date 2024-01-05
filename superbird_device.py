@@ -53,38 +53,57 @@ except ImportError:
 
 from superbird_partitions import SUPERBIRD_PARTITIONS
 
-def find_device():
+BURN_MODE_TIMEOUT = 10  # seconds, how long to wait for device to enter USB Burn Mode
+
+class BulkcmdException(Exception):
+    """
+    So we can catch this specifically
+    """
+
+def find_device(silent:bool=False):
     """ Find a superbird device and return its mode
         modes: normal, usb, usb-burn
     """
-    found_devices = usb.core.find(idVendor=0x18d1, idProduct=0x4e40)
-    if found_devices is not None:
-        dev_product = found_devices[0].device.product
-        print('Found device booted normally, with USB Gadget (adb/usbnet) enabled')
-        return 'normal'
-    found_devices = usb.core.find(idVendor=0x1b8e, idProduct=0xc003)
-    if found_devices is not None:
-        dev_product = found_devices[0].device.product
-        if dev_product is None:
-            print('Found device booted in USB Burn Mode (ready for commands)')
-            return 'usb-burn'
-        elif dev_product == 'GX-CHIP':
-            print('Found device booted in USB Mode (buttons 1 & 4 held at boot)')
-            return 'usb'
-    print('No device found!')
+    try:
+        found_devices = usb.core.find(idVendor=0x18d1, idProduct=0x4e40)
+        if found_devices is not None:
+            dev_product = found_devices[0].device.product
+            if not silent:
+                print('Found device booted normally, with USB Gadget (adb/usbnet) enabled')
+            return 'normal'
+        found_devices = usb.core.find(idVendor=0x1b8e, idProduct=0xc003)
+        if found_devices is not None:
+            dev_product = found_devices[0].device.product
+            if dev_product is None:
+                if not silent:
+                    print('Found device booted in USB Burn Mode (ready for commands)')
+                return 'usb-burn'
+            elif dev_product == 'GX-CHIP':
+                if not silent:
+                    print('Found device booted in USB Mode (buttons 1 & 4 held at boot)')
+                return 'usb'
+        if not silent:
+            print('No device found!')
+    except Exception:
+        if not silent:
+            print('Found a potential device that is not ready')
     return 'not-found'
 
-def check_device_mode(mode:str):
+def check_device_mode(mode:str, silent:bool=False):
     """ confirm if device is in the mode we need """
-    dev_mode = find_device()
+    dev_mode = find_device(silent=True)
     if dev_mode != mode:
-        print('Device is not booted to the correct mode!')
+        if not silent:
+            print('Device is not booted to the correct mode!')
         if mode == 'usb':
-            print('     need to power on while holding buttons 1 & 4 to enter USB Mode')
+            if not silent:
+                print('     need to power on while holding buttons 1 & 4 to enter USB Mode')
         elif mode == 'usb-burn':
-            print('     need to boot into USB Burn Mode')
+            if not silent:
+                print('     need to boot into USB Burn Mode')
         elif mode == 'normal':
-            print('     need to boot up normally first')
+            if not silent:
+                print('     need to boot up normally first')
         return False
     return True
 
@@ -99,11 +118,18 @@ def enter_burn_mode(dev):
         print('Entering USB Burn Mode')
         dev.bl2_boot('images/superbird.bl2.encrypted.bin', 'images/superbird.bootloader.img')
         print('Waiting for device...')
-        time.sleep(5)  # wait for it to boot up in USB Burn Mode
+        # wait for it to boot up in USB Burn Mode
+        wait_time = 0
+        while wait_time <= BURN_MODE_TIMEOUT:
+            time.sleep(1)
+            if check_device_mode('usb-burn', silent=True):
+                break
+            wait_time += 1
         if check_device_mode('usb-burn'):
             print('Device is now in USB Burn Mode')
-            dev = SuperbirdDevice()
             time.sleep(0.5)
+            dev = SuperbirdDevice()
+            time.sleep(1)
             dev.bulkcmd('amlmmc part 1')
             return dev
         else:
@@ -185,14 +211,15 @@ class SuperbirdDevice:
                 self.print(f'  result: {response}')
             if 'success' not in response:
                 self.print(f'Bulkcmd failed: {command} -> {response}')
-                raise Exception('Bulkcmd failed')
-        except USBTimeoutError:
+                raise BulkcmdException('Bulkcmd failed')
+            time.sleep(0.2)
+        except (USBTimeoutError, BulkcmdException) as ex:
             # if you use booti or mw.b, it wont return, thus will raise USBTimeoutError
             if [word for word in self.TIMEOUT_COMMANDS if word in command] or ignore_timeout:
                 if not silent:
                     self.print('  ...')
             else:
-                self.print(' Error: bulkcmd timed out!')
+                self.print(f' Error ({ex.__class__.__name__}): bulkcmd timed out or failed!')
                 self.print(' This can happen if the device ends up in a strange state, like as the result of a previously failed command')
                 self.print(' Try power cycling the device by pulling the cable, and then boot up and try again')
                 self.print('  You might need to do this multiple times')
@@ -399,6 +426,7 @@ class SuperbirdDevice:
         """ Restore given partition from given dump
             Like with dump_partition, we first have to read it into RAM, then instruct the device to write it to mmc, one chunk at a time
         """
+        self.bulkcmd('amlmmc part 1', silent=True)
         (part_size, part_offset) = self.validate_partition_size(part_name)
         if part_size is None:
             raise ValueError('Failed to validate partition size!')
@@ -460,4 +488,3 @@ class SuperbirdDevice:
                 print(f'Error while restoring partition {part_name}, {ex}')
                 print(traceback.format_exc())
                 sys.exit(1)
-            

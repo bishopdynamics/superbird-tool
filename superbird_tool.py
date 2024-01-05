@@ -19,7 +19,7 @@ from uboot_env import read_environ
 from superbird_device import SuperbirdDevice
 from superbird_device import find_device, check_device_mode, enter_burn_mode
 
-VERSION = '0.0.9'
+VERSION = '0.1.0'
 
 # this method chosen specifically because it works correctly when bundled using nuitka --onefile
 IMAGES_PATH = Path(os.path.dirname(__file__)).joinpath('images')
@@ -214,7 +214,7 @@ if __name__ == '__main__':
             os.mkdir(FOLDER_NAME)
             dev.dump_partition('bootloader', f'{FOLDER_NAME}/bootloader.dump')
             dev.dump_partition('env', f'{FOLDER_NAME}/env.dump')
-            # convert dumped env to txt version, for ease of access, 
+            # convert dumped env to txt version, for ease of access,
             #   and so it is present when restoring later
             convert_env_dump(f'{FOLDER_NAME}/env.dump', f'{FOLDER_NAME}/env.txt')
             dev.dump_partition('fip_a', f'{FOLDER_NAME}/fip_a.dump')

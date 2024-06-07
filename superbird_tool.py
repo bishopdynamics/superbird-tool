@@ -35,6 +35,23 @@ def convert_env_dump(env_dump:str, env_file:str):
             lines.append(f'{key}={value}\n')
         oef.writelines(lines)
 
+def test_if_empty(part):
+    # test if partiton is actually all zeros (dumped a wiped filesystem)
+    #   A true stock image has the data and settings partitions erased, and they get formatted at first boot
+    #   if this dump is from stock, then we can save time by just erasing those partitions
+    TEST_CHUNK = None
+    with open(f'{FOLDER_NAME}/{part}', 'rb') as daf:
+        # read the first 1024KB
+        TEST_CHUNK = daf.read(1024 * 1024)
+    try:
+        DECODED_CHUNK = TEST_CHUNK.decode('ascii').strip('\x00')
+        return DECODED_CHUNK
+    except Exception:
+        # since it is not really ascii, decoding will only work if all the
+        # bytes are within the appropriate range for ascii
+        # however, if it fails to decode, then it is definitely NOT all zeroed out
+        DECODED_CHUNK = '42' # just needs to not be empty
+        return DECODED_CHUNK
 
 if __name__ == '__main__':
     print(f'Spotify Car Thing (superbird) toolkit, v{VERSION}, by bishopdynamics')
@@ -240,7 +257,7 @@ if __name__ == '__main__':
             print(f'restoring entire device from dumpfiles in {FOLDER_NAME}')
             FILE_LIST = [
                 'fip_a.dump', 'fip_b.dump', 'logo.dump', 'dtbo_a.dump', 'dtbo_b.dump', 'vbmeta_a.dump',
-                'vbmeta_b.dump', 'boot_a.dump', 'boot_b.dump', 'misc.dump', 'settings.ext4', 'system_a.ext2', 'system_b.ext2',
+                'vbmeta_b.dump', 'boot_a.dump', 'boot_b.dump', 'misc.dump', 'system_a.ext2', 'system_b.ext2',
             ]
             for part_name in FILE_LIST:
                 if not os.path.isfile(f'{FOLDER_NAME}/{part_name}'):
@@ -269,33 +286,30 @@ if __name__ == '__main__':
             dev.restore_partition('boot_a', f'{FOLDER_NAME}/boot_a.dump')
             dev.restore_partition('boot_b', f'{FOLDER_NAME}/boot_b.dump')
             dev.restore_partition('misc', f'{FOLDER_NAME}/misc.dump')
-            dev.restore_partition('settings', f'{FOLDER_NAME}/settings.ext4')
             dev.restore_partition('system_a', f'{FOLDER_NAME}/system_a.ext2')
             dev.restore_partition('system_b', f'{FOLDER_NAME}/system_b.ext2')
-            # handle data partition last
+            # handle data and settings partitions last
             if not os.path.exists(f'{FOLDER_NAME}/data.ext4'):
                 print(f'did not find {FOLDER_NAME}/data.ext4, erasing data partition instead')
                 dev.bulkcmd('amlmmc erase data')
             else:
-                # test if data.ext4 is actually all zeros (dumped a wiped filesystem)
-                #   A true stock image has that partition erased, and it gets formatted at first boot
-                #   if this dump is from stock, then we can save time by just erasing that partition
-                TEST_CHUNK = None
-                with open(f'{FOLDER_NAME}/data.ext4', 'rb') as daf:
-                    # read the first 1024KB
-                    TEST_CHUNK = daf.read(1024 * 1024)
-                try:
-                    DECODED_CHUNK = TEST_CHUNK.decode('ascii').strip('\x00')
-                except Exception:
-                    # since it is not really ascii, decoding will only work if all the
-                    # bytes are within the appropriate range for ascii
-                    # however, if it fails to decode, then it is definitely NOT all zeroed out
-                    DECODED_CHUNK = '42' # just needs to not be empty
+                DECODED_CHUNK = test_if_empty('data.ext4')
                 if DECODED_CHUNK == '':
                     print(f'The first 1MB of {FOLDER_NAME}/data.ext4 are null, erasing data partition instead')
                     dev.bulkcmd('amlmmc erase data')
                 else:
                     dev.restore_partition('data', f'{FOLDER_NAME}/data.ext4')
+
+            if not os.path.exists(f'{FOLDER_NAME}/settings.ext4'):
+                print(f'did not find {FOLDER_NAME}/settings.ext4, erasing settings partition instead')
+                dev.bulkcmd('amlmmc erase settings')
+            else:
+                DECODED_CHUNK = test_if_empty('settings.ext4')
+                if DECODED_CHUNK == '':
+                    print(f'The first 1MB of {FOLDER_NAME}/settings.ext4 are null, erasing settings partition instead')
+                    dev.bulkcmd('amlmmc erase settings')
+                else:
+                    dev.restore_partition('settings', f'{FOLDER_NAME}/settings.ext4')
             # always do bootloader last
             dev.restore_partition('bootloader', f'{FOLDER_NAME}/bootloader.dump')
             dev.bulkcmd('reset')

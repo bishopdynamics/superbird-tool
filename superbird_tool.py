@@ -277,25 +277,29 @@ if __name__ == '__main__':
                 print(f'did not find {FOLDER_NAME}/data.ext4, erasing data partition instead')
                 dev.bulkcmd('amlmmc erase data')
             else:
-                # test if data.ext4 is actually all zeros (dumped a wiped filesystem)
-                #   A true stock image has that partition erased, and it gets formatted at first boot
-                #   if this dump is from stock, then we can save time by just erasing that partition
-                TEST_CHUNK = None
-                with open(f'{FOLDER_NAME}/data.ext4', 'rb') as daf:
-                    # read the first 1024KB
-                    TEST_CHUNK = daf.read(1024 * 1024)
                 try:
-                    DECODED_CHUNK = TEST_CHUNK.decode('ascii').strip('\x00')
-                except Exception:
-                    # since it is not really ascii, decoding will only work if all the
-                    # bytes are within the appropriate range for ascii
-                    # however, if it fails to decode, then it is definitely NOT all zeroed out
-                    DECODED_CHUNK = '42' # just needs to not be empty
-                if DECODED_CHUNK == '':
-                    print(f'The first 1MB of {FOLDER_NAME}/data.ext4 are null, erasing data partition instead')
+                    # test if data.ext4 is actually all zeros (dumped a wiped filesystem)
+                    #   A true stock image has that partition erased, and it gets formatted at first boot
+                    #   if this dump is from stock, then we can save time by just erasing that partition
+                    TEST_CHUNK = None
+                    with open(f'{FOLDER_NAME}/data.ext4', 'rb') as daf:
+                        # read the first 1024KB
+                        TEST_CHUNK = daf.read(1024 * 1024)
+                    try:
+                        DECODED_CHUNK = TEST_CHUNK.decode('ascii').strip('\x00')
+                    except Exception:
+                        # since it is not really ascii, decoding will only work if all the
+                        # bytes are within the appropriate range for ascii
+                        # however, if it fails to decode, then it is definitely NOT all zeroed out
+                        DECODED_CHUNK = '42' # just needs to not be empty
+                    if DECODED_CHUNK == '':
+                        print(f'The first 1MB of {FOLDER_NAME}/data.ext4 are null, erasing data partition instead')
+                        dev.bulkcmd('amlmmc erase data')
+                    else:
+                        dev.restore_partition('data', f'{FOLDER_NAME}/data.ext4')
+                except:
+                    print(f'Error restoring data.ext4, erasing data partition instead')
                     dev.bulkcmd('amlmmc erase data')
-                else:
-                    dev.restore_partition('data', f'{FOLDER_NAME}/data.ext4')
             # always do bootloader last
             dev.restore_partition('bootloader', f'{FOLDER_NAME}/bootloader.dump')
             dev.bulkcmd('reset')

@@ -54,12 +54,17 @@ and is missing `bulkcmd` functionality.
 ### macOS
 Tested on `aarch64` and `x86_64`
 
-On macOS, you must install `python3` and `libusb` from homebrew, and execute using that version of python
+On macOS, you must install `libusb` from homebrew. Additionally, if you have a `aarch64` mac, you will also need to install `pyusb` from the master branch as you'll need a workaround that is not present is the current pypy package.
+
+Tested with python `3.13.0`, installed via [pyenv](https://github.com/pyenv/pyenv).
+
 ```bash
-brew install python3 libusb
-/opt/homebrew/bin/python3 -m pip install git+https://github.com/superna9999/pyamlboot
-/opt/homebrew/bin/python3 superbird_tool.py --find_device
+brew install libusb
+python3 -m pip install git+https://github.com/pyusb/pyusb
+python3 -m pip install git+https://github.com/superna9999/pyamlboot
+python3 superbird_tool.py --find_device
 ```
+
 `root` is not needed on macOS
 
 ### Linux

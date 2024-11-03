@@ -22,11 +22,12 @@ except ImportError:
     """)
     if platform.system() == 'Darwin':
         print("""
-        on macOS, you must install python3 and libusb from homebrew, 
-        and execute using that version of python
-            brew install python3 libusb
-            /opt/homebrew/bin/python3 -m pip install git+https://github.com/superna9999/pyamlboot
-            /opt/homebrew/bin/python3 superbird_tool.py
+        on macOS, you must install libusb from homebrew, 
+        and install pyusb from the master branch
+            brew install libusb
+            python3 -m pip install git+https://github.com/pyusb/pyusb
+            python3 -m pip install git+https://github.com/superna9999/pyamlboot
+            python3 superbird_tool.py
         root is not needed on macOS
         """)
     elif platform.system() == 'Linux':
